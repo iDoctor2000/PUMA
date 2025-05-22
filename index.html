@@ -3,807 +3,736 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma Integrada de Constantes Vitales</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Análisis Diario de Urgencias</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f4f8; /* Color de fondo general */
-            color: #333;
+            font-family: Arial, sans-serif;
             margin: 0;
-            display: flex;
-            min-height: 100vh;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            line-height: 1.6;
         }
-        /* Sidebar */
-        #sidebar {
-            width: 260px; /* Ancho del sidebar */
-            background-color: #1f2937; /* Tailwind gray-800 */
-            color: #f3f4f6;
-            padding: 1.5rem;
-            transition: transform 0.3s ease-in-out;
-            transform: translateX(0);
-            z-index: 40;
-            position: fixed;
-            height: 100%;
-            overflow-y: auto;
-        }
-        #sidebar.collapsed {
-            transform: translateX(-100%);
-        }
-        #sidebar h2 {
-            font-size: 1.6rem; /* Tamaño del título del sidebar */
-            font-weight: 700;
-            margin-bottom: 2rem;
+
+        header {
+            background-color: #005a80; /* SMS Blue */
+            color: white;
+            padding: 1.5em 0;
             text-align: center;
-            color: #e5e7eb; /* Color del título del sidebar */
-        }
-        #sidebar ul { list-style: none; padding: 0; }
-        #sidebar ul li a {
-            display: flex; /* Para alinear icono y texto */
-            align-items: center; /* Centrar verticalmente */
-            padding: 0.85rem 1rem; /* Padding de los enlaces */
-            color: #d1d5db;
-            text-decoration: none;
-            border-radius: 0.375rem;
-            transition: background-color 0.2s ease, color 0.2s ease;
-            font-size: 0.95rem; /* Tamaño de fuente de los enlaces */
-        }
-        #sidebar ul li a:hover, #sidebar ul li a.active {
-            background-color: #374151; /* Tailwind gray-700 */
-            color: white;
-        }
-        #sidebar ul li a i { margin-right: 0.85rem; /* Espacio del icono */ width: 20px; /* Ancho fijo para iconos */ }
-
-        /* Main Content Area */
-        #mainContent {
-            flex-grow: 1;
-            padding: 2rem; /* Padding del contenido principal */
-            margin-left: 260px; /* Igual al ancho del sidebar */
-            transition: margin-left 0.3s ease-in-out;
-        }
-        #mainContent.sidebar-collapsed {
-            margin-left: 0;
+            border-bottom: 5px solid #ffc425; /* SMS Yellow */
         }
 
-        /* Hamburger Button */
-        #menuToggle {
-            position: fixed;
-            top: 1.25rem; /* Posición del botón de menú */
-            left: 1.25rem;
-            background-color: #3b82f6;
-            color: white;
-            border: none;
-            padding: 0.7rem 1rem; /* Padding del botón de menú */
-            border-radius: 0.375rem;
-            cursor: pointer;
-            z-index: 50;
-            font-size: 1.25rem; /* Tamaño del icono del menú */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        #menuToggle:hover { background-color: #2563eb; }
-
-        /* Contenedor principal del dashboard */
-        .dashboard-container {
-            width: 100%;
-            max-width: 1300px; /* Ancho máximo del contenido del dashboard */
-            margin: 0 auto; /* Centrar el contenido */
-        }
-        .dashboard-container h1.page-title { /* Título principal de la página del dashboard */
-            font-size: 2rem; /* Tamaño del título */
-            font-weight: 700;
-            color: #111827; /* Tailwind gray-900 */
-            margin-bottom: 2rem;
+        header h1 {
+            margin: 0;
+            font-size: 2em;
         }
 
-        /* Estilos para el gráfico y secciones de configuración/entrada */
-        #chartContainer {
-            width: 100%;
-            height: 550px; /* Altura del gráfico aumentada */
-            margin-bottom: 2.5rem; /* Espacio debajo del gráfico */
-            position: relative;
+        main {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        section {
             background-color: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
-        }
-        .config-section, .data-input-section { /* Estilos comunes para secciones */
-            margin-top: 2rem;
-            padding: 1.75rem; /* Padding de las secciones */
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
-        }
-        .config-section h2, .data-input-section h2 {
-            font-size: 1.5rem; /* Tamaño de los subtítulos de sección */
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 1.25rem;
-            border-bottom: 1px solid #e5e7eb; /* Línea divisoria */
-            padding-bottom: 0.75rem;
-        }
-        .grid-form { /* Grid para formularios */
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Columnas responsivas */
-            gap: 1.25rem; /* Espacio entre elementos del grid */
-            margin-bottom: 1.5rem;
-        }
-        .grid-form label {
-            display: block;
-            font-size: 0.9rem;
-            margin-bottom: 0.4rem;
-            color: #4b5563; /* Tailwind gray-600 */
-            font-weight: 500;
-        }
-        .grid-form input, .grid-form select {
-            width: 100%;
-            padding: 0.65rem 0.85rem; /* Padding de inputs y selects */
-            border: 1px solid #d1d5db; /* Tailwind gray-300 */
-            border-radius: 0.5rem; /* Bordes más redondeados */
-            font-size: 0.95rem;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-        .grid-form input:focus, .grid-form select:focus {
-            outline: none;
-            border-color: #3b82f6; /* Tailwind blue-500 */
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-        }
-        .button {
-            background-color: #3b82f6;
-            color: white;
-            padding: 0.75rem 1.5rem; /* Padding de botones */
-            border: none;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: background-color 0.3s ease;
-            display: inline-flex; /* Para alinear iconos en botones */
-            align-items: center;
-            justify-content: center;
-        }
-        .button:hover { background-color: #2563eb; }
-        .button i { margin-right: 0.5rem; }
-
-        #dataTableContainer {
-            margin-top: 1.5rem;
-            max-height: 350px; /* Altura máxima de la tabla */
-            overflow-y: auto;
-            border: 1px solid #e5e7eb;
+            margin-bottom: 25px;
+            padding: 20px;
             border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        #dataTable { width: 100%; border-collapse: collapse; }
-        #dataTable th, #dataTable td {
-            border-bottom: 1px solid #e5e7eb;
-            padding: 0.85rem 1rem; /* Padding de celdas de tabla */
-            text-align: left;
-            font-size: 0.9rem;
-        }
-        #dataTable th {
-            background-color: #f9fafb; /* Tailwind gray-50 */
-            position: sticky;
-            top: 0;
-            font-weight: 600;
-            color: #374151;
-        }
-        #dataTable tbody tr:hover { background-color: #f3f4f6; } /* Hover en filas */
 
-        /* Modal for CSV Uploader */
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-        .modal-content { background-color: #fff; margin: auto; padding: 2.5rem; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 750px; position: relative; }
-        .modal-close { color: #aaa; position: absolute; top: 1rem; right: 1.5rem; font-size: 2rem; font-weight: bold; cursor: pointer; }
-        .modal-close:hover, .modal-close:focus { color: #333; }
-        #csvUploaderContainer h1 { font-size: 1.75rem; margin-bottom: 1.5rem; color: #111827; }
-        #dropZone { border: 2px dashed #9ca3af; border-radius: 0.5rem; padding: 2rem; text-align: center; margin-bottom: 1.5rem; background-color: #f9fafb; transition: background-color 0.2s ease; cursor: pointer; }
-        #dropZone.dragover { background-color: #e0e7ff; border-color: #3b82f6; }
-        #dropZone p { margin: 0; color: #6b7280; }
-        input[type="file"]#csvFileInput, input[type="url"]#googleSheetUrlInput { margin-bottom: 1rem; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; width: 100%; }
-        .button-load-url { background-color: #10b981; margin-bottom: 1.5rem; }
-        .button-load-url:hover { background-color: #059669; }
-        .message-box { margin-top: 1rem; padding: 0.85rem; border-radius: 0.5rem; border-width: 1px; border-style: solid; font-size: 0.9rem; }
-        .message-box.success { background-color: #d1fae5; color: #065f46; border-color: #6ee7b7; }
-        .message-box.error { background-color: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-        .message-box.info { background-color: #dbeafe; color: #1e40af; border-color: #93c5fd; }
-        #csvDataTableContainerModal { max-height: 280px; overflow-y: auto; margin-top: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; }
-        #csvDataTableModal { width: 100%; border-collapse: collapse; }
-        #csvDataTableModal th, #csvDataTableModal td { border-bottom: 1px solid #e5e7eb; padding: 0.75rem; text-align: left; font-size: 0.875rem; }
-        #csvDataTableModal th { background-color: #f9fafb; position: sticky; top: 0; font-weight: 600; }
+        h2 {
+            color: #005a80;
+            border-bottom: 2px solid #ffc425;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
 
+        #drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            background-color: #f9f9f9;
+        }
+
+        #drop-zone.dragover {
+            border-color: #005a80;
+            background-color: #e9f5fb;
+        }
+
+        #file-name {
+            margin-top: 10px;
+            font-style: italic;
+            color: #555;
+        }
+
+        .kpi-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-around;
+        }
+
+        .kpi-card {
+            background-color: #e9f5fb;
+            border: 1px solid #cce4f0;
+            border-left: 5px solid #007bff;
+            padding: 15px;
+            border-radius: 5px;
+            flex: 1 1 200px; /* Flex properties for responsiveness */
+            min-width: 180px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .kpi-card h3 {
+            margin-top: 0;
+            font-size: 1.1em;
+            color: #005a80;
+        }
+
+        .kpi-card p {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #00405c;
+            margin-bottom: 0;
+        }
+
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .filters label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .filters select, .filters input[type="date"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+
+        .chart-container {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            background-color: #fdfdfd;
+            height: 400px; 
+            position: relative; 
+        }
+        .chart-container canvas {
+            max-height: 100%; 
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #333;
+            color: white;
+            font-size: 0.9em;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.5em;
+            }
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filters select, .filters input[type="date"] {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            .kpi-card {
+                flex-basis: 100%; 
+            }
+        }
     </style>
 </head>
 <body>
-    <button id="menuToggle"><i class="fas fa-bars"></i></button>
+    <header>
+        <h1>Diario de Urgencias, Hospitalización y Ocupación</h1>
+    </header>
 
-    <aside id="sidebar">
-        <h2>VitalSigns Pro</h2>
-        <nav>
-            <ul>
-                <li><a href="#" id="showDashboardLink" class="active"><i class="fas fa-chart-line"></i> Dashboard Gráfico</a></li>
-                <li><a href="#" id="openCsvUploader"><i class="fas fa-file-upload"></i> Cargar Datos CSV</a></li>
-            </ul>
-        </nav>
-    </aside>
-
-    <main id="mainContent">
-        <div class="dashboard-container">
-            <h1 class="page-title">Panel de Constantes Vitales</h1>
-
-            <div id="chartContainer">
-                <canvas id="vitalSignsChart"></canvas>
+    <main>
+        <section id="file-upload-section">
+            <h2>Cargar Archivo(s) PDF</h2>
+            <div id="drop-zone">
+                <p>Arrastra y suelta el/los archivo(s) PDF aquí, o haz clic para seleccionar.</p>
+                <input type="file" id="pdf-file-input" accept=".pdf" style="display: none;" multiple>
             </div>
-    
-            <div class="config-section">
-                <h2>Configurar Escalas de Ejes (Y)</h2>
-                <div class="grid-form">
-                    <div>
-                        <label for="tempMin">Temp Min (°C):</label>
-                        <input type="number" id="tempMin" value="34" class="p-2 border rounded">
-                        <label for="tempMax" class="mt-2">Temp Max (°C):</label>
-                        <input type="number" id="tempMax" value="42" class="p-2 border rounded">
-                    </div>
-                    <div>
-                        <label for="hrMin">FC Min (lpm):</label>
-                        <input type="number" id="hrMin" value="40" class="p-2 border rounded">
-                        <label for="hrMax" class="mt-2">FC Max (lpm):</label>
-                        <input type="number" id="hrMax" value="180" class="p-2 border rounded">
-                    </div>
-                    <div>
-                        <label for="rrMin">FR Min (rpm):</label>
-                        <input type="number" id="rrMin" value="0" class="p-2 border rounded">
-                        <label for="rrMax" class="mt-2">FR Max (rpm):</label>
-                        <input type="number" id="rrMax" value="50" class="p-2 border rounded">
-                    </div>
-                    <div>
-                        <label for="bpMin">TA Min (mmHg):</label>
-                        <input type="number" id="bpMin" value="40" class="p-2 border rounded">
-                        <label for="bpMax" class="mt-2">TA Max (mmHg):</label>
-                        <input type="number" id="bpMax" value="220" class="p-2 border rounded">
-                    </div>
+            <p id="file-name"></p>
+        </section>
+
+        <section id="kpi-section">
+            <h2>Indicadores Clave (KPIs) - Ejemplo para 20/05/2025</h2>
+            <div class="kpi-container">
+                <div class="kpi-card">
+                    <h3>Ocupación Media Camas</h3>
+                    <p id="kpi-ocupacion-media">- %</p>
                 </div>
-                <button id="applyScaleConfig" class="button"><i class="fas fa-ruler-combined"></i> Aplicar Escalas</button>
-            </div>
-    
-            <div class="data-input-section">
-                <h2>Registrar Nuevas Constantes</h2>
-                <div class="grid-form">
-                    <div>
-                        <label for="inputFecha">Fecha:</label>
-                        <input type="date" id="inputFecha" class="p-2 border rounded">
-                    </div>
-                    <div>
-                        <label for="inputTurno">Turno:</label>
-                        <select id="inputTurno" class="p-2 border rounded">
-                            <option value="M">Mañana</option>
-                            <option value="T">Tarde</option>
-                            <option value="N">Noche</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="inputTemp">Temperatura (°C):</label>
-                        <input type="number" step="0.1" id="inputTemp" placeholder="Ej: 36.5" class="p-2 border rounded">
-                    </div>
-                    <div>
-                        <label for="inputTAS">TA Sistólica (mmHg):</label>
-                        <input type="number" id="inputTAS" placeholder="Ej: 120" class="p-2 border rounded">
-                    </div>
-                    <div>
-                        <label for="inputTAD">TA Diastólica (mmHg):</label>
-                        <input type="number" id="inputTAD" placeholder="Ej: 80" class="p-2 border rounded">
-                    </div>
-                    <div>
-                        <label for="inputFC">Frec. Cardíaca (lpm):</label>
-                        <input type="number" id="inputFC" placeholder="Ej: 70" class="p-2 border rounded">
-                    </div>
-                    <div>
-                        <label for="inputFR">Frec. Respiratoria (rpm):</label>
-                        <input type="number" id="inputFR" placeholder="Ej: 16" class="p-2 border rounded">
-                    </div>
-                    <div>
-                        <label for="inputSatO2">Sat. O₂ (%):</label>
-                        <input type="number" id="inputSatO2" placeholder="Ej: 98 (opcional)" class="p-2 border rounded">
-                    </div>
+                <div class="kpi-card">
+                    <h3>Presión Media Urgencias</h3>
+                    <p id="kpi-presion-media">- %</p>
                 </div>
-                <button id="addDataButton" class="button"><i class="fas fa-plus-circle"></i> Añadir y Actualizar</button>
-                
-                <div id="dataTableContainer">
-                    <h3>Datos Registrados:</h3>
-                    <table id="dataTable">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Turno</th>
-                                <th>T (°C)</th>
-                                <th>TA (Sis/Dia)</th>
-                                <th>FC (lpm)</th>
-                                <th>FR (rpm)</th>
-                                <th>SatO₂ (%)</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                <div class="kpi-card">
+                    <h3>Total Urgencias (HUVA Gen, 20/05)</h3>
+                    <p id="kpi-total-urgencias">-</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Pacientes COVID (Área I, 20/05)</h3>
+                    <p id="kpi-pacientes-covid">-</p>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <section id="filter-section">
+            <h2>Filtros</h2>
+            <div class="filters">
+                <label for="date-filter">Fecha:</label>
+                <select id="date-filter">
+                    <option value="all">Todas</option>
+                </select>
+
+                <label for="area-filter">Área Sanitaria/Hospital:</label>
+                <select id="area-filter">
+                    <option value="all">Todas</option>
+                </select>
+                 <label for="indicator-filter">Indicador:</label>
+                <select id="indicator-filter">
+                    <option value="all">Todos</option>
+                    <option value="entradasUrgencias">Entradas Urgencias</option>
+                    <option value="ocupacionCamas">Ocupación Camas</option>
+                    <option value="pacientesIngresados">Pacientes Ingresados</option>
+                    <option value="pacientesCovidGripeVRS">Pacientes COVID/Gripe/VRS</option>
+                </select>
+            </div>
+        </section>
+
+        <section id="charts-section">
+            <h2>Gráficos</h2>
+            <div class="chart-container">
+                <canvas id="chart-entradas-urgencias"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="chart-ocupacion-camas"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="chart-pacientes-ingresados-covid"></canvas>
+            </div>
+        </section>
     </main>
 
-    <div id="csvUploaderModal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close" id="closeCsvModal">&times;</span>
-            <div id="csvUploaderContainer">
-                <h1>Cargar Datos CSV</h1>
-                <p class="text-sm text-gray-600 mb-3">Puedes cargar un archivo CSV local o desde una URL de Google Sheets publicada como CSV.</p>
-                
-                <label for="googleSheetUrlInput" class="block text-sm font-medium text-gray-700 mb-1">URL de Google Sheet (publicada como CSV):</label>
-                <input type="url" id="googleSheetUrlInput" 
-                       placeholder="Pega aquí la URL del CSV publicado" 
-                       value="https://docs.google.com/spreadsheets/d/e/2PACX-1vThcYOP6TMxWvWw3n-DfBeQfJSvOmtZe1WpHM3sOl7yus_tvuxgn6tTcmUf5C3oR0CiPglW-7_TOCOI/pub?output=csv" 
-                       class="mb-2">
-                <button id="loadFromUrlButton" class="button button-load-url w-full">
-                    <i class="fas fa-cloud-download-alt"></i>Cargar desde URL
-                </button>
-                
-                <p class="text-center my-3 text-gray-500 text-sm font-medium">O carga un archivo local:</p>
-                
-                <div id="dropZone">
-                    <p><i class="fas fa-file-csv text-3xl text-gray-400 mb-2"></i><br>Arrastra y suelta un archivo CSV aquí, o haz clic para seleccionar.</p>
-                </div>
-                <input type="file" id="csvFileInput" accept=".csv" class="hidden"> 
-                <div id="messageAreaModal" class="message-box info" style="display: none;"></div>
-                
-                <div id="csvDataTableContainerModal">
-                    <table id="csvDataTableModal">
-                        <thead>
-                            <tr id="csvHeaderRowModal"></tr>
-                        </thead>
-                        <tbody id="csvBodyModal"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+    <footer>
+        <p>Servicio Murciano de Salud - Aplicación de Visualización de Datos (Ejemplo)</p>
+    </footer>
 
     <script>
-        // --- Datos Globales y Estado ---
-        let patientData = [ // Datos iniciales de ejemplo
-            { fecha: "2024-05-20", turno: "M", temp: 36.5, tas: 120, tad: 80, fc: 70, fr: 16, sato2: 98 },
-            { fecha: "2024-05-20", turno: "T", temp: 37.0, tas: 122, tad: 81, fc: 75, fr: 18, sato2: 97 },
-            { fecha: "2024-05-21", turno: "N", temp: 36.8, tas: 118, tad: 78, fc: 68, fr: 15 },
-        ];
-        let vitalSignsChart;
-        let isSidebarCollapsed = false;
+        // Initialize pdf.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
 
-        // --- Elementos del DOM (Dashboard) ---
-        const ctx = document.getElementById('vitalSignsChart').getContext('2d');
-        const inputFecha = document.getElementById('inputFecha');
-        const inputTurno = document.getElementById('inputTurno');
-        const inputTemp = document.getElementById('inputTemp');
-        const inputTAS = document.getElementById('inputTAS');
-        const inputTAD = document.getElementById('inputTAD');
-        const inputFC = document.getElementById('inputFC');
-        const inputFR = document.getElementById('inputFR');
-        const inputSatO2 = document.getElementById('inputSatO2'); // Correcto
-        const addDataButton = document.getElementById('addDataButton');
-        const dataTableBody = document.querySelector('#dataTable tbody');
-        const applyScaleButton = document.getElementById('applyScaleConfig');
-
-        // --- Elementos del DOM (Sidebar y Modal) ---
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('mainContent');
-        const menuToggle = document.getElementById('menuToggle');
-        const showDashboardLink = document.getElementById('showDashboardLink');
-        const openCsvUploaderBtn = document.getElementById('openCsvUploader');
-        const csvUploaderModal = document.getElementById('csvUploaderModal');
-        const closeCsvModal = document.getElementById('closeCsvModal');
-        const csvFileInput = document.getElementById('csvFileInput');
-        const googleSheetUrlInput = document.getElementById('googleSheetUrlInput');
-        const loadFromUrlButton = document.getElementById('loadFromUrlButton');
-        const messageAreaModal = document.getElementById('messageAreaModal');
-        const dropZone = document.getElementById('dropZone');
-        const csvHeaderRowModal = document.getElementById('csvHeaderRowModal');
-        const csvBodyModal = document.getElementById('csvBodyModal');
-
-
-        // --- Lógica de Sidebar y Navegación Modal ---
-        menuToggle.addEventListener('click', () => {
-            isSidebarCollapsed = !isSidebarCollapsed;
-            sidebar.classList.toggle('collapsed', isSidebarCollapsed);
-            mainContent.classList.toggle('sidebar-collapsed', isSidebarCollapsed);
-            menuToggle.style.left = isSidebarCollapsed ? '1.25rem' : `calc(260px + 1.25rem)`;
-            setTimeout(() => {
-                if (vitalSignsChart) vitalSignsChart.resize();
-            }, 350);
-        });
-        menuToggle.style.left = `calc(260px + 1.25rem)`;
-
-        showDashboardLink.addEventListener('click', (e) => { e.preventDefault(); setActiveLink(showDashboardLink); csvUploaderModal.style.display = 'none'; });
-        openCsvUploaderBtn.addEventListener('click', (e) => { e.preventDefault(); csvUploaderModal.style.display = 'flex'; });
-        closeCsvModal.addEventListener('click', () => { csvUploaderModal.style.display = 'none'; });
-        window.addEventListener('click', (event) => { if (event.target === csvUploaderModal) csvUploaderModal.style.display = 'none'; });
-        function setActiveLink(activeLink) {
-            document.querySelectorAll('#sidebar nav ul li a').forEach(link => link.classList.remove('active'));
-            activeLink.classList.add('active');
+        // --- Contenido de parser.js ---
+        // !!! ESTA SECCIÓN ES LA MÁS CRÍTICA Y PROBABLEMENTE NECESITE AJUSTES !!!
+        // !!! REVISA LA CONSOLA (F12) PARA VER EL TEXTO EXTRAÍDO DEL PDF Y ADAPTA ESTAS FUNCIONES !!!
+        function cleanValue(valueStr) {
+            if (typeof valueStr !== 'string') return valueStr;
+            const cleanedStr = valueStr.trim();
+            const specialCodes = ["BO", "LE", "E", "T", "WO", "-", "","S/D", "NULL"];
+            if (specialCodes.includes(cleanedStr.toUpperCase())) return null;
+            let numStr = cleanedStr.replace(/\./g, '');
+            numStr = numStr.replace(/,/, '.');
+            numStr = numStr.replace('%', '');
+            if (!isNaN(parseFloat(numStr)) && isFinite(numStr)) return parseFloat(numStr);
+            return cleanedStr; // Devuelve como texto si no es un número reconocible
         }
-        
-        // --- Lógica del Cargador de CSV (Modal) ---
-        dropZone.addEventListener('dragover', (event) => { event.preventDefault(); dropZone.classList.add('dragover'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (event) => {
-            event.preventDefault();
-            dropZone.classList.remove('dragover');
-            const files = event.dataTransfer.files;
-            if (files.length > 0 && files[0].name.endsWith('.csv')) {
-                handleLocalCsvFile(files[0]);
-            } else {
-                showMessageInModal('Por favor, suelta un archivo CSV.', 'error');
+
+        function getRelevantPageText(allPagesText, startPage, endPage = null) {
+            let relevantText = "";
+            const startIndex = startPage - 1;
+            const endIndex = endPage ? endPage - 1 : startIndex;
+            for (let i = startIndex; i <= endIndex && i < allPagesText.length; i++) {
+                relevantText += allPagesText[i] + "\n";
             }
-        });
-        dropZone.addEventListener('click', () => csvFileInput.click());
-        csvFileInput.addEventListener('change', (event) => {
-            if (event.target.files.length > 0) handleLocalCsvFile(event.target.files[0]);
-        });
-
-        loadFromUrlButton.addEventListener('click', async () => {
-            const url = googleSheetUrlInput.value.trim();
-            if (!url) return showMessageInModal('Introduce una URL de Google Sheets CSV.', 'error');
-            if (!url.includes('docs.google.com/spreadsheets') || !url.includes('output=csv')) {
-                return showMessageInModal('URL no válida. Asegúrate que sea de Google Sheets y termine en "output=csv".', 'error');
-            }
-            showMessageInModal('Cargando desde URL...', 'info');
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-                const csvContent = await response.text();
-                processAndDisplayCsvData(csvContent, `URL: ${new URL(url).hostname}`);
-            } catch (error) {
-                showMessageInModal(`Error al cargar desde URL: ${error.message}`, 'error');
-            }
-        });
-
-        function handleLocalCsvFile(file) {
-            showMessageInModal(`Archivo local: ${file.name}`, 'info');
-            const reader = new FileReader();
-            reader.onload = (e) => processAndDisplayCsvData(e.target.result, file.name);
-            reader.onerror = () => showMessageInModal('Error al leer archivo local.', 'error');
-            reader.readAsText(file);
+            return relevantText;
         }
 
-        function processAndDisplayCsvData(csvContent, sourceName) {
-            try {
-                const { data, headers } = parseGenericCsv(csvContent); 
-                if (data.length === 0) {
-                    showMessageInModal(`CSV de '${sourceName}' vacío o sin datos válidos.`, 'error');
-                    return;
-                }
-                
-                displayCsvDataInModal(data, headers); 
-                transformAndSetGlobalPatientData(data, headers); 
-
-                if (patientData.length > 0) { // Verificar si la transformación produjo datos válidos
-                    showMessageInModal(`Datos de '${sourceName}' procesados. Puedes cerrar esta ventana.`, 'success');
-                    createChart(patientData); 
-                    renderDataTable();      
-                } else {
-                     showMessageInModal(`No se pudieron transformar datos válidos del CSV de '${sourceName}'. Verifica el formato y las cabeceras.`, 'error');
-                }
-            } catch (error) {
-                console.error("Error en processAndDisplayCsvData:", error)
-                showMessageInModal(`Error procesando CSV de '${sourceName}': ${error.message}`, 'error');
-            }
-        }
-        
-        function parseGenericCsv(csvText) { 
-            const lines = csvText.trim().split(/\r\n|\n/);
-            if (lines.length === 0) return { data: [], headers: [] };
-            const headers = lines[0].split(',').map(h => h.trim());
-            const data = lines.slice(1).map(line => {
-                const values = line.split(',').map(v => v.trim());
-                if (values.length === headers.length) {
-                    return headers.reduce((obj, header, i) => {
-                        obj[header] = values[i];
-                        return obj;
-                    }, {});
-                }
-                console.warn("Línea CSV ignorada por número incorrecto de columnas:", line);
-                return null; 
-            }).filter(row => row !== null);
-            return { data, headers };
-        }
-
-        function transformAndSetGlobalPatientData(parsedCsvData, csvHeaders) {
-            const keyMap = {
-                fecha: ['fecha', 'date', 'timestamp'],
-                hora: ['hora', 'time'], // Para extraer la hora y derivar el turno
-                temp: ['temp', 'temperatura', 'temperature', 't', 't (°c)'],
-                tas: ['tas', 'sistolica', 'systolic', 'ta sistolica', 'tas (mmhg)'],
-                tad: ['tad', 'diastolica', 'diastolic', 'ta diastolica', 'tad (mmhg)'],
-                fc: ['fc', 'frecuencia cardiaca', 'hr', 'heart rate', 'fc (lpm)'],
-                fr: ['fr', 'frecuencia respiratoria', 'rr', 'respiratory rate', 'fr (rpm)'],
-                sato2: ['sato2', 'saturacion', 'saturation', 'spo2', 'sato2 (%)']
-            };
-
-            const findHeader = (possibleNames) => csvHeaders.find(h => possibleNames.includes(h.toLowerCase()));
-
-            const transformed = parsedCsvData.map(row => {
-                const newEntry = {};
-                let fechaStr, horaStr;
-
-                // Mapear Fecha
-                const fechaHeader = findHeader(keyMap.fecha);
-                if (fechaHeader && row[fechaHeader] !== undefined && row[fechaHeader] !== '') {
-                    try {
-                        // Intentar normalizar la fecha a YYYY-MM-DD
-                        const d = new Date(row[fechaHeader].replace(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/, '$3-$2-$1')); // Intenta convertir DD/MM/YYYY a YYYY-MM-DD
-                        if (isNaN(d.getTime())) { // Si falla, intenta parseo directo
-                             const directDate = new Date(row[fechaHeader]);
-                             if(isNaN(directDate.getTime())) throw new Error('Invalid date');
-                             fechaStr = directDate.toISOString().split('T')[0];
-                        } else {
-                            fechaStr = d.toISOString().split('T')[0];
-                        }
-                        newEntry.fecha = fechaStr;
-                    } catch { 
-                        console.warn(`Formato de fecha inválido para '${row[fechaHeader]}', se ignora la fila.`); return null; 
-                    }
-                } else {
-                    console.warn("Fila ignorada por falta de cabecera/valor de fecha:", row); return null;
-                }
-
-                // Mapear Hora y derivar Turno
-                const horaHeader = findHeader(keyMap.hora);
-                if (horaHeader && row[horaHeader] !== undefined && row[horaHeader] !== '') {
-                    horaStr = row[horaHeader];
-                    const hourMatch = horaStr.match(/^(\d{1,2})/); // Extraer la hora
-                    if (hourMatch) {
-                        const hour = parseInt(hourMatch[1], 10);
-                        if (hour >= 7 && hour < 15) newEntry.turno = 'M';      // Mañana: 7:00 - 14:59
-                        else if (hour >= 15 && hour < 22) newEntry.turno = 'T'; // Tarde: 15:00 - 21:59
-                        else newEntry.turno = 'N';                              // Noche: 22:00 - 06:59
-                    } else {
-                        console.warn(`Formato de hora inválido '${horaStr}', no se pudo derivar turno. Fila ignorada.`); return null;
-                    }
-                } else {
-                    console.warn("Fila ignorada por falta de cabecera/valor de hora para derivar turno:", row); return null;
-                }
-                
-                // Mapear otras constantes
-                ['temp', 'tas', 'tad', 'fc', 'fr', 'sato2'].forEach(internalKey => {
-                    const header = findHeader(keyMap[internalKey]);
-                    if (header && row[header] !== undefined && row[header] !== '') {
-                        let value = parseFloat(String(row[header]).replace(',', '.'));
-                        if (!isNaN(value)) newEntry[internalKey] = value;
-                        else newEntry[internalKey] = undefined; // Si no es número válido, dejar undefined
-                    }
-                });
-                return newEntry;
-            }).filter(entry => entry !== null && entry.fecha && entry.turno); // Asegurar que fecha y turno existan después de todo
-
-            transformed.sort((a, b) => {
-                const dateA = new Date(a.fecha).getTime();
-                const dateB = new Date(b.fecha).getTime();
-                if (dateA !== dateB) return dateA - dateB;
-                const turnoOrder = { 'M': 1, 'T': 2, 'N': 3 };
-                return turnoOrder[a.turno] - turnoOrder[b.turno];
-            });
-            patientData = transformed; 
-            console.log("PatientData global actualizado:", patientData);
-        }
-
-
-        function displayCsvDataInModal(data, headers) {
-            csvHeaderRowModal.innerHTML = '';
-            csvBodyModal.innerHTML = '';
-            if (data.length === 0) return;
-            headers.forEach(h => { const th = document.createElement('th'); th.textContent = h; csvHeaderRowModal.appendChild(th); });
-            data.slice(0, 30).forEach(row => { 
-                const tr = csvBodyModal.insertRow();
-                headers.forEach(header => tr.insertCell().textContent = row[header] !== undefined ? row[header] : '-');
-            });
-        }
-        function showMessageInModal(text, type = 'info') {
-            messageAreaModal.textContent = text;
-            messageAreaModal.className = `message-box ${type}`;
-            messageAreaModal.style.display = 'block';
-        }
-
-        function formatXAxisLabels(data) {
-            return data.map(d => {
-                try {
-                    // Asumimos que d.fecha ya es YYYY-MM-DD
-                    const dateParts = d.fecha.split('-');
-                    const year = parseInt(dateParts[0]);
-                    const month = parseInt(dateParts[1]) -1; // Meses en JS son 0-indexados
-                    const day = parseInt(dateParts[2]);
-                    
-                    const localDate = new Date(year, month, day); 
-                    const displayDay = String(localDate.getDate()).padStart(2, '0');
-                    const displayMonth = String(localDate.getMonth() + 1).padStart(2, '0');
-                    return `${displayDay}/${displayMonth} ${d.turno}`;
-                } catch (e) { console.error("Error formateando etiqueta X:", d, e); return "Error Fecha"; }
-            });
-        }
-        
-        const customAnnotationsPlugin = {
-            id: 'customAnnotations',
-            afterDatasetsDraw: (chart) => {
-                const { ctx, data, chartArea: { top, bottom, left, right } } = chart;
-                ctx.save();
-                ctx.font = 'bold 10px Inter';
-                ctx.textAlign = 'center';
-
-                patientData.forEach((pData, index) => { 
-                    const meta = chart.getDatasetMeta(0); 
-                    if (!meta.data[index]) return; 
-
-                    const xPos = meta.data[index].x;
-                    
-                    if (pData.sato2 !== undefined && pData.sato2 !== null) {
-                        ctx.fillStyle = '#1f2937'; 
-                        let yAnchor = top + 20; 
-                        const tempMeta = chart.getDatasetMeta(data.datasets.findIndex(ds => ds.label === 'Temperatura'));
-                        const tempPoint = tempMeta?.data[index];
-                        
-                        if (tempPoint && tempPoint.active !== false && tempPoint.y) { // Check if point exists and has y
-                             yAnchor = tempPoint.y - 15;
-                        } else if (pData.tas) { 
-                            const bpScale = chart.scales.yBP;
-                            if (bpScale) yAnchor = bpScale.getPixelForValue(pData.tas) - 15;
-                        }
-
-                        if (xPos >= left && xPos <= right && yAnchor > top - 10 && yAnchor < bottom + 10) { 
-                           ctx.fillText(String(pData.sato2) + "%", xPos, Math.max(top - 5, yAnchor)); 
-                        }
-                    }
-
-                    ['Temperatura', 'Frec. Cardíaca', 'Frec. Respiratoria'].forEach(label => {
-                        const datasetIndex = data.datasets.findIndex(ds => ds.label === label);
-                        if (datasetIndex === -1) return;
-                        
-                        const dataset = data.datasets[datasetIndex];
-                        const yScale = chart.scales[dataset.yAxisID];
-                        const value = dataset.data[index]; 
-
-                        if (value === null || value === undefined || !yScale) return;
-
-                        if (value < yScale.min) {
-                            ctx.fillStyle = dataset.borderColor || 'black';
-                            ctx.fillText(String(value), xPos, bottom + 12);
-                        } else if (value > yScale.max) {
-                            ctx.fillStyle = dataset.borderColor || 'black';
-                            ctx.fillText(String(value), xPos, top - 8);
-                        }
-                    });
-                });
-                ctx.restore();
-            }
-        };
-
-        function createChart(currentData) {
-            if (!currentData || currentData.length === 0) {
-                console.log("createChart llamado con datos vacíos o nulos.");
-                if (vitalSignsChart) vitalSignsChart.destroy(); // Destruir gráfico existente si hay
-                // Podrías dibujar un gráfico placeholder aquí si lo deseas
-                return;
-            }
-            console.log("Creando gráfico con datos:", currentData);
-
-            const labels = formatXAxisLabels(currentData);
-            let scalesOptions = {
-                x: { type: 'category', labels: labels, grid: { display: true, color: 'rgba(200,200,200,0.2)', borderColor: 'rgba(200,200,200,0.5)', borderDash: [2,3]}, ticks: { color: '#555', font: {size: 10}}},
-                yTemp: { type: 'linear', position: 'left', display: true, min: parseFloat(document.getElementById('tempMin').value), max: parseFloat(document.getElementById('tempMax').value), title: { display: true, text: 'Temp (°C)', color: 'red', font:{weight:'bold'}}, ticks: { color: 'red', stepSize: 0.5 }, grid: { drawOnChartArea: false }},
-                yFC: { type: 'linear', position: 'right', display: true, min: parseFloat(document.getElementById('hrMin').value), max: parseFloat(document.getElementById('hrMax').value), title: { display: true, text: 'FC (lpm)', color: 'blue', font:{weight:'bold'}}, ticks: { color: 'blue', stepSize: 10 }, grid: { drawOnChartArea: false }},
-                yFR: { type: 'linear', position: 'right', display: true, min: parseFloat(document.getElementById('rrMin').value), max: parseFloat(document.getElementById('rrMax').value), title: { display: true, text: 'FR (rpm)', color: 'black', font:{weight:'bold'}}, ticks: { color: 'black', stepSize: 5 }, offset: true, grid: { drawOnChartArea: false }},
-                yBP: { type: 'linear', position: 'left', display: true, min: parseFloat(document.getElementById('bpMin').value), max: parseFloat(document.getElementById('bpMax').value), title: { display: true, text: 'TA (mmHg)', color: 'green', font:{weight:'bold'}}, ticks: { color: 'green', stepSize: 20 }, grid: { display: true, color: 'rgba(200,200,200,0.3)', borderColor: 'rgba(200,200,200,0.5)'}}
-            };
-
-            if (vitalSignsChart) vitalSignsChart.destroy();
-            vitalSignsChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Temperatura', data: currentData.map(d => d.temp), borderColor: 'red', backgroundColor: 'red', type: 'line', pointStyle: 'circle', radius: 5, hoverRadius: 7, tension: 0.1, yAxisID: 'yTemp', order: 1, spanGaps: true },
-                        { label: 'Frec. Cardíaca', data: currentData.map(d => d.fc), borderColor: 'blue', backgroundColor: 'blue', type: 'line', pointStyle: 'circle', radius: 5, hoverRadius: 7, tension: 0.1, yAxisID: 'yFC', order: 2, spanGaps: true },
-                        { label: 'Frec. Respiratoria', data: currentData.map(d => d.fr), borderColor: 'black', backgroundColor: 'black', type: 'line', pointStyle: 'circle', radius: 5, hoverRadius: 7, tension: 0.1, yAxisID: 'yFR', order: 3, spanGaps: true },
-                        { label: 'Tensión Arterial', data: currentData.map(d => (d.tas && d.tad) ? [d.tad, d.tas] : null), backgroundColor: 'rgba(46, 204, 113, 0.7)', borderColor: 'green', borderWidth: 2, barPercentage: 0.1, categoryPercentage: 0.2, yAxisID: 'yBP', type: 'bar', order: 0 },
-                        { label: 'SatO₂', data: currentData.map(d => d.sato2), hidden: true, yAxisID: 'yTemp' } 
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, stacked: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { usePointStyle: true, filter: (item) => item.datasetIndex !== 4 }},
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) label += ': ';
-                                    if (context.dataset.label === 'Tensión Arterial' && context.raw && Array.isArray(context.raw)) {
-                                        label += `${context.raw[1]}/${context.raw[0]}`;
-                                    } else if (context.parsed.y !== null) {
-                                        label += context.parsed.y;
-                                    }
-                                    const originalDataPoint = patientData[context.dataIndex]; 
-                                    if (originalDataPoint && originalDataPoint.sato2 !== undefined && context.dataset.label !== 'SatO₂') {
-                                        // Podrías añadir SatO2 aquí si es necesario, pero el plugin ya lo dibuja
-                                    }
-                                    return label;
-                                }
-                            }
-                        },
-                        customAnnotations: {}
-                    },
-                    scales: scalesOptions
-                },
-                plugins: [customAnnotationsPlugin]
-            });
-        }
-        
-        applyScaleButton.addEventListener('click', () => createChart(patientData));
-
-        function renderDataTable() {
-            dataTableBody.innerHTML = '';
-            if (!patientData || patientData.length === 0) {
-                console.log("renderDataTable: No hay datos para mostrar.");
-                return;
-            }
-            patientData.forEach(d => {
-                const row = dataTableBody.insertRow();
-                row.insertCell().textContent = d.fecha ? new Date(d.fecha + 'T00:00:00Z').toLocaleDateString('es-ES', {timeZone: 'Europe/Madrid'}) : '-';
-                row.insertCell().textContent = d.turno || '-';
-                row.insertCell().textContent = d.temp !== undefined ? d.temp.toFixed(1) : '-';
-                row.insertCell().textContent = (d.tas !== undefined && d.tad !== undefined) ? `${d.tas}/${d.tad}` : '-';
-                row.insertCell().textContent = d.fc !== undefined ? d.fc : '-';
-                row.insertCell().textContent = d.fr !== undefined ? d.fr : '-';
-                row.insertCell().textContent = d.sato2 !== undefined ? d.sato2 : '-';
-            });
-        }
-        
-        inputFecha.valueAsDate = new Date(); 
-
-        addDataButton.addEventListener('click', () => {
-            const fecha = inputFecha.value;
-            const turno = inputTurno.value;
-            if (!fecha) return alert("Introduce una fecha.");
-
-            const existingEntryIndex = patientData.findIndex(d => d.fecha === fecha && d.turno === turno);
+        // !!! EJEMPLO DE PARSER: AJUSTAR SEGÚN EL TEXTO REAL EXTRAÍDO !!!
+        function parseEntradasUrgencias(tableText) {
+            console.log("--- Parseando Entradas Urgencias ---");
+            // console.log("Texto para Entradas Urgencias:", tableText.substring(0, 500) + "..."); // Muestra una parte del texto
+            const lines = tableText.split('\n').filter(line => line.trim() !== "");
+            const data = [];
+            let dates = [];
+            let currentArea = "";
             
-            const newData = {
-                fecha: fecha,
-                turno: turno,
-                temp: inputTemp.value ? parseFloat(inputTemp.value) : undefined,
-                tas: inputTAS.value ? parseInt(inputTAS.value) : undefined,
-                tad: inputTAD.value ? parseInt(inputTAD.value) : undefined,
-                fc: inputFC.value ? parseInt(inputFC.value) : undefined,
-                fr: inputFR.value ? parseInt(inputFR.value) : undefined,
-                sato2: inputSatO2.value ? parseInt(inputSatO2.value) : undefined,
-            };
-
-            if (existingEntryIndex > -1) {
-                patientData[existingEntryIndex] = {...patientData[existingEntryIndex], ...newData};
-                 alert("Registro actualizado para esta fecha y turno.");
-            } else {
-                patientData.push(newData);
+            // AJUSTAR ESTA LÓGICA BASADO EN EL TEXTO REAL DE TU PDF
+            const dateLineIndex = lines.findIndex(line => line.toLowerCase().includes("puerta urgencias") && (line.includes("04/21") || line.includes("04 / 21")));
+            if (dateLineIndex === -1) {
+                console.error("Cabecera de fechas NO encontrada para Entradas Urgencias. Revisa el texto del PDF.");
+                return [];
             }
 
-            patientData.sort((a, b) => {
-                const dateA = new Date(a.fecha).getTime(); const dateB = new Date(b.fecha).getTime();
-                if (dateA !== dateB) return dateA - dateB;
-                const turnoOrder = { 'M': 1, 'T': 2, 'N': 3 };
-                return turnoOrder[a.turno] - turnoOrder[b.turno];
+            const headerCellsOriginal = lines[dateLineIndex].split(/\s{2,}/); // Dividir por 2 o más espacios
+            const headerCells = headerCellsOriginal.map(s => s.replace(/"/g, '').trim());
+            dates = headerCells.filter(cell => /\d{2}\s*\/\s*\d{2}/.test(cell)).map(d => d.replace(/\s/g, ''));
+            console.log("Fechas detectadas (Urgencias):", dates);
+
+            const areaRegexGlobal = /^(Area-?\s*([IVX]+|[\w\s]+)-?[\w\s]+)/i;
+
+            for (let i = dateLineIndex + 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                // console.log("Procesando línea Urgencias:", line); // DEBUG
+                if (!line) continue;
+
+                const cells = line.split(/\s{2,}/).map(s => s.replace(/"/g, '').trim());
+                // console.log("Celdas extraídas Urgencias:", cells); // DEBUG
+
+                let potentialArea = cells[0];
+                let puertaUrgencias = "";
+                let dataCellsStartIndex = 1;
+
+                if (areaRegexGlobal.test(potentialArea)) {
+                    currentArea = potentialArea.replace(/^Area-?\s*/, "Área ").replace(/\s*Dete$/, " Oeste").replace(/\s*Norne$/, " Noroeste").replace(/\s*Alliplano/, " Altiplano").replace(/\s*Lneca/, " Lorca");
+                    puertaUrgencias = cells[1];
+                    dataCellsStartIndex = 2;
+                } else if (currentArea && cells.length > dates.length && !areaRegexGlobal.test(cells[0])) { 
+                    puertaUrgencias = cells[0];
+                    dataCellsStartIndex = 1;
+                } else if (currentArea && cells.length <= dates.length +1 && !areaRegexGlobal.test(cells[0]) && cells[0] !== "") { // Para el caso HUSL Mat
+                     puertaUrgencias = cells[0];
+                     dataCellsStartIndex = 1;
+                }
+                 else {
+                    // console.warn("Línea no reconocida o sin área actual (Urgencias):", line); // DEBUG
+                    continue; 
+                }
+                
+                if (!puertaUrgencias || puertaUrgencias.toUpperCase().includes("TOTAL") || puertaUrgencias.length < 3) continue; // Evitar cabeceras o totales
+
+                for (let j = 0; j < dates.length; j++) {
+                    const valueStr = cells[j + dataCellsStartIndex];
+                    const value = cleanValue(valueStr);
+                    if (dates[j] && value !== null && value !== "" && !isNaN(value)) { // Asegurarse que es un número
+                        data.push({
+                            area: currentArea,
+                            puertaUrgencias: puertaUrgencias,
+                            fecha: dates[j],
+                            entradas: value
+                        });
+                    }
+                }
+            }
+            if (data.length === 0) console.warn("No se extrajeron datos para Entradas Urgencias. Revisa el parser y el texto del PDF.");
+            console.log("Parsed Entradas Urgencias:", data.slice(0,5)); // Muestra solo los primeros 5 para no llenar la consola
+            return data;
+        }
+
+        // !!! EJEMPLO DE PARSER: AJUSTAR SEGÚN EL TEXTO REAL EXTRAÍDO !!!
+        function parsePacientesIngresados(tableText) {
+            console.log("--- Parseando Pacientes Ingresados ---");
+            const lines = tableText.split('\n').filter(line => line.trim() !== "");
+            const data = [];
+            let dates = [];
+
+            const dateLineIndex = lines.findIndex(line => (line.includes("04/21") || line.includes("04 / 21")) && (line.includes("05/20") || line.includes("05 / 20")));
+            if (dateLineIndex === -1) {
+                console.error("Cabecera de fechas NO encontrada para Pacientes Ingresados.");
+                return [];
+            }
+            dates = lines[dateLineIndex].split(/\s{2,}/).map(s => s.replace(/"/g, '').trim()).filter(s => /\d{2}\s*\/\s*\d{2}/.test(s) || /\d{2}\/\d{2}/.test(s)).map(s => s.replace(/\s/g, ''));
+            console.log("Fechas detectadas (Ingresados):", dates);
+
+
+            const normalizedAreaNames = { /* COPIADO DE LA VERSIÓN ANTERIOR, AJUSTAR SI ES NECESARIO */
+                "Areal- Murcia Deste": "Área I - Murcia Oeste", "Areall Cartagena": "Área II - Cartagena", "Area III Lorca": "Área III - Lorca", "Area IV- Norne": "Área IV - Noroeste", "Area V Altiplano": "Área V - Altiplano", "Area VI-Vega Media del Segura": "Área VI - Vega Media del Segura", "Anea VII Murcia Este": "Área VII - Murcia Este", "Area Viii Mar Menor": "Área VIII - Mar Menor", "Area IX-Vega Alta del Segira": "Área IX - Vega Alta del Segura"
+            };
+            const areaKeys = Object.keys(normalizedAreaNames);
+
+            for (let i = dateLineIndex + 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const cells = line.split(/\s{2,}/).map(s => s.replace(/"/g, '').trim());
+                const potentialAreaKey = cells[0];
+                const matchedAreaKey = areaKeys.find(key => potentialAreaKey.toLowerCase().startsWith(key.split(" ")[0].toLowerCase().substring(0,6)));
+                
+                if (matchedAreaKey) {
+                    const area = normalizedAreaNames[matchedAreaKey];
+                    for (let j = 0; j < dates.length; j++) {
+                        const valueStr = cells[j + 1];
+                        const value = cleanValue(valueStr);
+                        if (dates[j] && value !== null && value !== "" && !isNaN(value)) {
+                            data.push({ area: area, fecha: dates[j], pacientesIngresados: value });
+                        }
+                    }
+                }
+            }
+            if (data.length === 0) console.warn("No se extrajeron datos para Pacientes Ingresados.");
+            console.log("Parsed Pacientes Ingresados:", data.slice(0,5));
+            return data;
+        }
+        
+        // !!! EJEMPLO DE PARSER: AJUSTAR SEGÚN EL TEXTO REAL EXTRAÍDO !!!
+        function parseOcupacionCamas(tableText) {
+            console.log("--- Parseando Ocupacion Camas ---");
+            const lines = tableText.split('\n').filter(line => line.trim() !== "");
+            const data = [];
+            const targetDateColumnName = "05/20";
+            
+            const areaNameMap = { /* COPIADO DE LA VERSIÓN ANTERIOR, AJUSTAR SI ES NECESARIO */
+                "Aves Morcia Dette": "Área I - Murcia Oeste", "Cartagena": "Área II - Cartagena", "Area Lorca": "Área III - Lorca", "Noroeste": "Área IV - Noroeste", "Arsa V Altiplano": "Área V - Altiplano", "Area Vi Vega Meutia del Segura": "Área VI - Vega Media del Segura", "Area V Murcia": "Área VII - Murcia Este", "Area V Mar Menor": "Área VIII - Mar Menor", "Area Vega Alta del Segira": "Área IX - Vega Alta del Segura"
+            };
+            const areaKeys = Object.keys(areaNameMap);
+            let currentArea = "";
+
+            for (const line of lines) {
+                // ESTA PARTE ES MUY HEURÍSTICA Y PUEDE FALLAR FÁCILMENTE.
+                // SE BASA EN ENCONTRAR LÍNEAS QUE CONTENGAN "Cames Ocupades" Y LUEGO BUSCAR UN %
+                const cells = line.split(/\s{3,}|,\s*/).map(s => s.replace(/"/g, '').trim());
+                const potentialAreaKey = cells[0];
+                const matchedAreaKey = areaKeys.find(key => potentialAreaKey.toLowerCase().startsWith(key.split(" ")[0].toLowerCase().substring(0,4)));
+
+                if (matchedAreaKey) currentArea = areaNameMap[matchedAreaKey];
+
+                if (currentArea && cells.some(cell => cell.toLowerCase().includes("cames ocupades"))) {
+                    for (let k = cells.length - 1; k > 0; k--) { // Buscar el % de derecha a izquierda
+                        const ocupacionStr = cells[k];
+                        if (ocupacionStr && ocupacionStr.includes('%')) {
+                             const ocupacion = cleanValue(ocupacionStr);
+                             if (ocupacion !== null && !isNaN(ocupacion)) {
+                                data.push({ area: currentArea, fecha: targetDateColumnName, porcentajeOcupadas: ocupacion });
+                                break; 
+                             }
+                        }
+                    }
+                    currentArea = ""; 
+                }
+            }
+            if (data.length === 0) console.warn("No se extrajeron datos para Ocupación Camas.");
+            console.log("Parsed Ocupacion Camas (Simplificado para 20/05):", data);
+            return data;
+        }
+
+        // !!! EJEMPLO DE PARSER: AJUSTAR SEGÚN EL TEXTO REAL EXTRAÍDO !!!
+        function parsePacientesCovidGripeVRS(tableText) {
+            console.log("--- Parseando Pacientes COVID/Gripe/VRS ---");
+            const lines = tableText.split('\n').filter(line => line.trim() !== "");
+            const data = [];
+            let dates = [];
+
+            const dateLineIndex = lines.findIndex(line => line.toLowerCase().includes("desglose") && (line.includes("04/21") || line.includes("04 / 21")));
+            if (dateLineIndex === -1) {
+                console.error("Cabecera de fechas NO encontrada para Pacientes COVID/Gripe/VRS.");
+                return [];
+            }
+            dates = lines[dateLineIndex].split(/\s{2,}|,(?!\s)/).map(s => s.replace(/"/g, '').trim()).filter(s => /\d{2}\s*\/\s*\d{2}/.test(s) || /\d{2}\/\d{2}/.test(s)).map(s => s.replace(/\s/g, ''));
+            console.log("Fechas detectadas (COVID/Gripe/VRS):", dates);
+
+            let currentArea = "";
+            const areaNameMap = { /* COPIADO DE LA VERSIÓN ANTERIOR, AJUSTAR SI ES NECESARIO */
+                "Areal- Murcia Oeste": "Área I - Murcia Oeste", "Arnall Cartagena": "Área II - Cartagena", "Arealll- Lurza": "Área III - Lorca", "Area- Norgeste": "Área IV - Noroeste", "Areav- Altiplano": "Área V - Altiplano", "Arna VI-Veg Media del Segura": "Área VI - Vega Media del Segura", "Area VII- Murcia Ege": "Área VII - Murcia Este", "Area Mill Mar Menor": "Área VIII - Mar Menor", "Area X-Vega Alta del Segura": "Área IX - Vega Alta del Segura"
+            };
+            const areaKeys = Object.keys(areaNameMap);
+
+            for (let i = dateLineIndex + 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const cells = line.split(/,(?![^"]*"(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/"/g, '').trim());
+                const firstCell = cells[0];
+                const matchedAreaKey = areaKeys.find(key => firstCell.toLowerCase().startsWith(key.split(" ")[0].toLowerCase().substring(0,5)));
+
+                if (matchedAreaKey) currentArea = areaNameMap[matchedAreaKey];
+
+                const desglose = cells[1] ? cells[1].toUpperCase() : "";
+                if (currentArea && (desglose === "COVID" || desglose === "GRIPE" || desglose === "VRS")) {
+                    for (let j = 0; j < dates.length; j++) {
+                        const valueStr = cells[j + 2];
+                        const value = cleanValue(valueStr);
+                        if (dates[j] && value !== null && value !== "" && !isNaN(value)) {
+                            data.push({ area: currentArea, tipo: desglose, fecha: dates[j], pacientes: value });
+                        }
+                    }
+                }
+            }
+            if (data.length === 0) console.warn("No se extrajeron datos para Pacientes COVID/Gripe/VRS.");
+            console.log("Parsed Pacientes COVID/Gripe/VRS:", data.slice(0,5));
+            return data;
+        }
+
+        async function parsePDFData(allPagesText, fileNameForContext = "archivo") {
+            console.log(`Iniciando parseo para: ${fileNameForContext}`);
+            const structuredData = {
+                entradasUrgencias: [], pacientesIngresados: [], ocupacionCamas: [], pacientesCovidGripeVRS: [],
+            };
+
+            // Los números de página son ejemplos, ajústalos según tu PDF
+            // Página 3 del PDF es índice 2 en allPagesText
+            const urgenciasText = getRelevantPageText(allPagesText, 3, 3); 
+            if (urgenciasText) structuredData.entradasUrgencias = parseEntradasUrgencias(urgenciasText);
+            
+            // Página 9 del PDF es índice 8
+            const ingresadosText = getRelevantPageText(allPagesText, 9, 9); 
+            if (ingresadosText) structuredData.pacientesIngresados = parsePacientesIngresados(ingresadosText);
+            
+            // Página 15 del PDF es índice 14
+            const ocupacionText = getRelevantPageText(allPagesText, 15, 15); 
+             if (ocupacionText) structuredData.ocupacionCamas = parseOcupacionCamas(ocupacionText);
+
+            // Página 11 del PDF es índice 10
+            const covidGripeVRSText = getRelevantPageText(allPagesText, 11, 11); 
+            if (covidGripeVRSText) structuredData.pacientesCovidGripeVRS = parsePacientesCovidGripeVRS(covidGripeVRSText);
+
+            return structuredData;
+        }
+
+        // --- Contenido de ui.js ---
+        let charts = {};
+
+        function populateFilters(data) {
+            const dateFilter = document.getElementById('date-filter');
+            const areaFilter = document.getElementById('area-filter');
+            const allDates = new Set();
+            const allAreas = new Set();
+
+            (data.entradasUrgencias || []).forEach(item => { allDates.add(item.fecha); allAreas.add(item.area); if (item.puertaUrgencias) allAreas.add(item.puertaUrgencias); });
+            (data.ocupacionCamas || []).forEach(item => { allDates.add(item.fecha); allAreas.add(item.area); });
+            (data.pacientesIngresados || []).forEach(item => { allDates.add(item.fecha); allAreas.add(item.area); });
+            (data.pacientesCovidGripeVRS || []).forEach(item => { allDates.add(item.fecha); allAreas.add(item.area); });
+
+            const sortedDates = Array.from(allDates).sort((a, b) => {
+                const [dayA, monthA] = a.split('/'); const [dayB, monthB] = b.split('/');
+                return new Date(`2025-${monthA}-${dayA}`) - new Date(`2025-${monthB}-${dayB}`); // Asume año 2025 para ordenar
             });
 
-            createChart(patientData);
-            renderDataTable();
+            dateFilter.innerHTML = '<option value="all">Todas las Fechas</option>';
+            sortedDates.forEach(date => { const option = document.createElement('option'); option.value = date; option.textContent = date; dateFilter.appendChild(option); });
+
+            areaFilter.innerHTML = '<option value="all">Todas las Áreas/Hospitales</option>';
+            Array.from(allAreas).sort().forEach(area => { if (!area) return; const option = document.createElement('option'); option.value = area; option.textContent = area; areaFilter.appendChild(option); });
+        }
+
+        function updateKPIs(data) {
+            const targetDate = "20/05"; // Para KPIs "del día"
+
+            let kpiOcupacion = "N/A";
+            if (data.ocupacionCamas && data.ocupacionCamas.length > 0) {
+                const ocupacionHoy = data.ocupacionCamas.filter(d => d.fecha === targetDate && d.porcentajeOcupadas != null);
+                if (ocupacionHoy.length > 0) {
+                    const totalOcupacion = ocupacionHoy.reduce((sum, item) => sum + item.porcentajeOcupadas, 0);
+                    kpiOcupacion = `${(totalOcupacion / ocupacionHoy.length).toFixed(2)} %`;
+                }
+            }
+            document.getElementById('kpi-ocupacion-media').textContent = kpiOcupacion;
+            document.getElementById('kpi-presion-media').textContent = 'N/A (Parsear)'; // Necesita datos de Presión Urgencias
+
+            let kpiTotalUrg = "N/A";
+            if (data.entradasUrgencias && data.entradasUrgencias.length > 0) {
+                const urgenciasTarget = data.entradasUrgencias.find(d => d.puertaUrgencias === "HUVA Gen" && d.fecha === targetDate);
+                if(urgenciasTarget) kpiTotalUrg = urgenciasTarget.entradas;
+            }
+            document.getElementById('kpi-total-urgencias').textContent = kpiTotalUrg;
+
+            let kpiCovid = "N/A";
+            if (data.pacientesCovidGripeVRS && data.pacientesCovidGripeVRS.length > 0) {
+                const covidTarget = data.pacientesCovidGripeVRS.find(d => d.area === "Área I - Murcia Oeste" && d.tipo === "COVID" && d.fecha === targetDate);
+                if(covidTarget) kpiCovid = covidTarget.pacientes;
+            }
+            document.getElementById('kpi-pacientes-covid').textContent = kpiCovid;
+        }
+
+        function renderChart(chartId, chartConfig) {
+            const chartElement = document.getElementById(chartId);
+            if (!chartElement) { console.error(`Elemento canvas con ID ${chartId} no encontrado.`); return; }
+            const ctx = chartElement.getContext('2d');
+            if (charts[chartId]) charts[chartId].destroy();
+            charts[chartId] = new Chart(ctx, chartConfig);
+        }
+
+        function displayEntradasUrgenciasChart(urgenciasDataAll, selectedArea = 'all') {
+            const urgenciasData = urgenciasDataAll || [];
+            let filteredData = urgenciasData;
+            if (selectedArea !== 'all') filteredData = urgenciasData.filter(item => item.area === selectedArea || item.puertaUrgencias === selectedArea);
+            
+            if (!filteredData || filteredData.length === 0) {
+                 renderChart('chart-entradas-urgencias', {type: 'line', data:{labels:[], datasets:[]}, options:{plugins:{title:{display:true, text:'Sin datos para Entradas Urgencias con los filtros actuales'}}}});
+                 return;
+            }
+
+            const datasets = {}; const labels = new Set();
+            filteredData.forEach(item => { const key = item.puertaUrgencias || item.area; if (!datasets[key]) datasets[key] = {}; datasets[key][item.fecha] = (datasets[key][item.fecha] || 0) + item.entradas; labels.add(item.fecha); });
+            const sortedLabels = Array.from(labels).sort((a, b) => { const [dayA, monthA] = a.split('/'); const [dayB, monthB] = b.split('/'); return new Date(`2025-${monthA}-${dayA}`) - new Date(`2025-${monthB}-${dayB}`); });
+            const chartDatasets = Object.keys(datasets).map((key, index) => { const color = `hsl(${(index * (360 / (Object.keys(datasets).length || 1)))}, 70%, 50%)`; return { label: key, data: sortedLabels.map(date => datasets[key][date] || 0), borderColor: color, backgroundColor: color + '33', fill: false, tension: 0.1 }; });
+            renderChart('chart-entradas-urgencias', { type: 'line', data: { labels: sortedLabels, datasets: chartDatasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Entradas Totales en Urgencias por Día y Área/Puerta' }, legend: { position: 'top' } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Número de Entradas' } } } } });
+        }
+
+        function displayOcupacionCamasChart(ocupacionDataAll, selectedArea = 'all') {
+            const ocupacionData = ocupacionDataAll || [];
+            let filteredData = ocupacionData;
+             if (selectedArea !== 'all') filteredData = ocupacionData.filter(item => item.area === selectedArea);
+            if (!filteredData || filteredData.length === 0) {
+                 renderChart('chart-ocupacion-camas', {type: 'bar', data:{labels:[], datasets:[]}, options:{plugins:{title:{display:true, text:'Sin datos para Ocupación Camas con los filtros actuales'}}}});
+                 return;
+            }
+            const labels = filteredData.map(item => item.area); const dataValues = filteredData.map(item => item.porcentajeOcupadas);
+            renderChart('chart-ocupacion-camas', { type: 'bar', data: { labels: labels, datasets: [{ label: '% Ocupación Camas (el 20/05)', data: dataValues, backgroundColor: 'rgba(255, 159, 64, 0.5)', borderColor: 'rgba(255, 159, 64, 1)', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { title: { display: true, text: '% Ocupación Camas (20/05)' } }, scales: { x: { beginAtZero: true, max: 100, title: { display: true, text: 'Porcentaje (%)' } } } } });
+        }
+
+        function displayPacientesCovidChart(covidDataAll, selectedArea = 'all') {
+            const covidData = covidDataAll || [];
+            let filteredData = covidData;
+            if (selectedArea !== 'all') filteredData = covidData.filter(item => item.area === selectedArea);
+             if (!filteredData || filteredData.length === 0) {
+                 renderChart('chart-pacientes-ingresados-covid', {type: 'line', data:{labels:[], datasets:[]}, options:{plugins:{title:{display:true, text:'Sin datos para Pacientes COVID/Gripe/VRS con los filtros actuales'}}}});
+                 return;
+            }
+            const datasets = {}; const labels = new Set();
+            filteredData.forEach(item => { const key = item.tipo; if (!datasets[key]) datasets[key] = {}; datasets[key][item.fecha] = (datasets[key][item.fecha] || 0) + item.pacientes; labels.add(item.fecha); });
+            const sortedLabels = Array.from(labels).sort((a, b) => { const [dayA, monthA] = a.split('/'); const [dayB, monthB] = b.split('/'); return new Date(`2025-${monthA}-${dayA}`) - new Date(`2025-${monthB}-${dayB}`); });
+            const typeColors = { "COVID": "rgba(255, 99, 132, 0.7)", "GRIPE": "rgba(54, 162, 235, 0.7)", "VRS": "rgba(75, 192, 192, 0.7)" };
+            const chartDatasets = Object.keys(datasets).map(key => ({ label: key, data: sortedLabels.map(date => datasets[key][date] || 0), borderColor: typeColors[key] ? typeColors[key].replace('0.7', '1') : 'rgba(0,0,0,1)', backgroundColor: typeColors[key] || 'rgba(0,0,0,0.5)', tension: 0.1, fill: false }));
+            renderChart('chart-pacientes-ingresados-covid', { type: 'line', data: { labels: sortedLabels, datasets: chartDatasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Evolución Pacientes COVID, Gripe, VRS' } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Número de Pacientes' } } } } });
+        }
+
+        function updateDashboard(fullData, filters) {
+            if (!fullData) {
+                console.warn("updateDashboard llamado sin datos (fullData es null/undefined)");
+                return;
+            }
+            let { entradasUrgencias = [], ocupacionCamas = [], pacientesCovidGripeVRS = [], pacientesIngresados = [] } = fullData;
+
+            if (filters.date !== 'all') {
+                entradasUrgencias = entradasUrgencias.filter(d => d.fecha === filters.date);
+                ocupacionCamas = ocupacionCamas.filter(d => d.fecha === filters.date || filters.date === "20/05");
+                pacientesCovidGripeVRS = pacientesCovidGripeVRS.filter(d => d.fecha === filters.date);
+                if (pacientesIngresados) pacientesIngresados = pacientesIngresados.filter(d => d.fecha === filters.date);
+            }
+            
+            updateKPIs(fullData); 
+
+            document.getElementById('chart-entradas-urgencias').parentElement.style.display = (filters.indicator === 'all' || filters.indicator === 'entradasUrgencias') ? 'block' : 'none';
+            document.getElementById('chart-ocupacion-camas').parentElement.style.display = (filters.indicator === 'all' || filters.indicator === 'ocupacionCamas') ? 'block' : 'none';
+            document.getElementById('chart-pacientes-ingresados-covid').parentElement.style.display = (filters.indicator === 'all' || filters.indicator === 'pacientesCovidGripeVRS') ? 'block' : 'none';
+
+            if (filters.indicator === 'all' || filters.indicator === 'entradasUrgencias') displayEntradasUrgenciasChart(entradasUrgencias, filters.area);
+            if (filters.indicator === 'all' || filters.indicator === 'ocupacionCamas') {
+                const ocupacionDataToDisplay = (ocupacionCamas && ocupacionCamas.length > 0 && filters.date !== 'all') ? ocupacionCamas : fullData.ocupacionCamas.filter(d => d.fecha === "20/05");
+                displayOcupacionCamasChart(ocupacionDataToDisplay, filters.area);
+            }
+            if (filters.indicator === 'all' || filters.indicator === 'pacientesCovidGripeVRS') displayPacientesCovidChart(pacientesCovidGripeVRS, filters.area);
+        }
+
+        // --- Contenido de app.js ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('pdf-file-input');
+            const fileNameDisplay = document.getElementById('file-name');
+            let globalPDFData = null;
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (event) => { event.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+            
+            dropZone.addEventListener('drop', (event) => { event.preventDefault(); dropZone.classList.remove('dragover'); if (event.dataTransfer.files.length > 0) handleFiles(event.dataTransfer.files); });
+            fileInput.addEventListener('change', (event) => { if (event.target.files.length > 0) handleFiles(event.target.files); });
+
+            async function handleFiles(files) {
+                if (files.length === 0) return;
+                fileNameDisplay.textContent = `${files.length} archivo(s) cargado(s): ${Array.from(files).map(f => f.name).join(', ')}`;
+                ['kpi-ocupacion-media', 'kpi-total-urgencias', 'kpi-pacientes-covid', 'kpi-presion-media'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = "Procesando...";
+                });
+
+                let allDataFromAllFiles = { entradasUrgencias: [], pacientesIngresados: [], ocupacionCamas: [], pacientesCovidGripeVRS: [] };
+
+                for (const file of files) {
+                    if (file.type !== "application/pdf") { alert(`El archivo ${file.name} no es un PDF y será omitido.`); continue; }
+                    const reader = new FileReader();
+                    const fileProcessPromise = new Promise((resolve, reject) => {
+                        reader.onload = async function(event) {
+                            const pdfData = new Uint8Array(event.target.result);
+                            try {
+                                const pdf = await pdfjsLib.getDocument({data: pdfData}).promise;
+                                const numPages = pdf.numPages;
+                                const allPagesTextPromises = [];
+                                for (let i = 1; i <= numPages; i++) {
+                                    allPagesTextPromises.push(
+                                        pdf.getPage(i).then(page =>
+                                            page.getTextContent().then(textContent =>
+                                                textContent.items.map(item => item.str).join(' ') // Simple join
+                                            )
+                                        )
+                                    );
+                                }
+                                const allPagesText = await Promise.all(allPagesTextPromises);
+                                
+                                console.log(`--- TEXTO CRUDO PDF (${file.name}) ---`);
+                                console.log("PÁGINA 3 (Índice 2):", allPagesText[2] ? allPagesText[2].substring(0,1500) : "No disponible/Corta");
+                                console.log("PÁGINA 9 (Índice 8):", allPagesText[8] ? allPagesText[8].substring(0,1500) : "No disponible/Corta");
+                                console.log("PÁGINA 11 (Índice 10):", allPagesText[10] ? allPagesText[10].substring(0,1500) : "No disponible/Corta");
+                                console.log("PÁGINA 15 (Índice 14):", allPagesText[14] ? allPagesText[14].substring(0,1500) : "No disponible/Corta");
+
+                                const currentFileParsedData = await parsePDFData(allPagesText, file.name);
+                                
+                                // Acumular datos
+                                allDataFromAllFiles.entradasUrgencias.push(...(currentFileParsedData.entradasUrgencias || []));
+                                allDataFromAllFiles.pacientesIngresados.push(...(currentFileParsedData.pacientesIngresados || []));
+                                allDataFromAllFiles.ocupacionCamas.push(...(currentFileParsedData.ocupacionCamas || []));
+                                allDataFromAllFiles.pacientesCovidGripeVRS.push(...(currentFileParsedData.pacientesCovidGripeVRS || []));
+                                resolve();
+                            } catch (error) {
+                                console.error(`Error procesando PDF ${file.name}:`, error);
+                                alert(`Error al procesar PDF ${file.name}. Revisa la consola.`);
+                                reject(error);
+                            }
+                        };
+                        reader.onerror = (error) => { console.error(`Error leyendo archivo ${file.name}:`, error); alert(`Error al leer archivo ${file.name}.`); reject(error); }
+                        reader.readAsArrayBuffer(file);
+                    });
+                    try { await fileProcessPromise; } catch (e) { /* Error ya manejado */ }
+                }
+
+                globalPDFData = allDataFromAllFiles;
+                if (globalPDFData && (globalPDFData.entradasUrgencias.length > 0 || globalPDFData.ocupacionCamas.length > 0)) {
+                    console.log("Datos Estructurados Finales (múltiples archivos):", globalPDFData);
+                    populateFilters(globalPDFData);
+                    applyFiltersAndDisplay();
+                } else {
+                    fileNameDisplay.textContent += " - No se pudieron extraer datos válidos de los archivos.";
+                    updateKPIs({}); // Limpiar KPIs
+                    // Limpiar gráficos (opcional, o mostrar mensaje de "sin datos")
+                    ['chart-entradas-urgencias', 'chart-ocupacion-camas', 'chart-pacientes-ingresados-covid'].forEach(id => renderChart(id, {type:'line', data:{labels:[], datasets:[]}, options:{plugins:{title:{display:true, text:'Sin datos'}}}}));
+                }
+            }
+
+            document.getElementById('date-filter').addEventListener('change', applyFiltersAndDisplay);
+            document.getElementById('area-filter').addEventListener('change', applyFiltersAndDisplay);
+            document.getElementById('indicator-filter').addEventListener('change', applyFiltersAndDisplay);
+            
+            function applyFiltersAndDisplay() {
+                if (!globalPDFData) { console.warn("applyFiltersAndDisplay llamado sin globalPDFData."); return; }
+                const filters = { date: document.getElementById('date-filter').value, area: document.getElementById('area-filter').value, indicator: document.getElementById('indicator-filter').value };
+                console.log("Aplicando filtros:", filters);
+                updateDashboard(globalPDFData, filters);
+            }
+            
+            // Estado inicial de los gráficos
+            ['chart-entradas-urgencias', 'chart-ocupacion-camas', 'chart-pacientes-ingresados-covid'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) renderChart(id, {type:'line', data:{labels:[], datasets:[]}, options:{plugins:{title:{display:true, text:'Carga un PDF para ver los datos'}}}});
+            });
         });
-
-        // --- Inicialización al Cargar la Página ---
-        createChart(patientData);
-        renderDataTable();
-        setActiveLink(showDashboardLink);
-
     </script>
 </body>
 </html>
